@@ -1,9 +1,8 @@
+require("dotenv").config();
 const mongoose = require("mongoose");
 
 async function main() {
-  await mongoose.connect(
-    "mongodb+srv://sayar_db_user:TYIJ2oVuMTPl9nNP@sayarnode.ruf7bk7.mongodb.net/sayarDevTinder"
-  );
+  await mongoose.connect(process.env.MONGO_URI);
 }
 
 module.exports = main;
