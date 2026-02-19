@@ -109,4 +109,44 @@ connectionRouter.post(
   }
 );
 
+connectionRouter.get("/feed", userAuthentication, async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    const decoded = jwt.verify(token, "SAYAR@123");
+    const { userId } = decoded;
+
+    const page = parseInt(req.query.page) || 1;
+    const limit = 10; // Assuming 10 items per page
+    const skip = (page - 1) * 10; // Assuming 10 items per page
+    const connections = await Connection.find({
+      $or: [{ fromUserId: userId }, { toUserId: userId }],
+    }).select("fromUserId toUserId");
+    console.log(connections);
+    //need to add validation by which we can restrict these users not to come in feed api response as well as also the logged in user detail also should not come
+    const hideUsers = new Set();
+    connections.forEach((user) => {
+      hideUsers.add(user.fromUserId.toString());
+      hideUsers.add(user.toUserId.toString());
+    });
+    console.log(hideUsers);
+    //now we want to fetch all users from the DB where the id is not belong to hide users id
+    const feedData = await User.find({
+      $and: [
+        { _id: { $nin: Array.from(hideUsers) } },
+        { _id: { $ne: userId } },
+      ],
+    })
+      .select("firstName lastName skills about")
+      .limit(limit)
+      .skip(skip);
+    if (feedData.length === 0) {
+      return res.status(200).json([]);
+    }
+    console.log(feedData);
+    res.status(200).json(Array.from(feedData));
+  } catch (err) {
+    res.status(400).send("Error fetching feed" + err.message);
+  }
+});
+
 module.exports = connectionRouter;
