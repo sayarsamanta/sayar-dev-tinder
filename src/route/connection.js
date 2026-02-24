@@ -17,7 +17,7 @@ connectionRouter.post(
       const status = req.params.status;
 
       //need to validate status and toUserId
-      const allowedStatus = ["pending", "interested", "rejected"];
+      const allowedStatus = ["pending", "interested", "ignored"];
       if (!allowedStatus.includes(status)) {
         return res.status(400).send("Invalid status");
       }
@@ -93,13 +93,6 @@ connectionRouter.post(
           .send("You are not authorized to review this connection request");
       }
 
-      //need to validate that connection request is in pending state only then we can review the request
-      if (connection.status !== "pending") {
-        return res
-          .status(400)
-          .send("Only pending connection requests can be reviewed");
-      }
-
       connection.status = status;
       await connection.save();
       res.status(200).send("Connection request reviewed successfully");
@@ -121,14 +114,12 @@ connectionRouter.get("/feed", userAuthentication, async (req, res) => {
     const connections = await Connection.find({
       $or: [{ fromUserId: userId }, { toUserId: userId }],
     }).select("fromUserId toUserId");
-    console.log(connections);
     //need to add validation by which we can restrict these users not to come in feed api response as well as also the logged in user detail also should not come
     const hideUsers = new Set();
     connections.forEach((user) => {
       hideUsers.add(user.fromUserId.toString());
       hideUsers.add(user.toUserId.toString());
     });
-    console.log(hideUsers);
     //now we want to fetch all users from the DB where the id is not belong to hide users id
     const feedData = await User.find({
       $and: [
@@ -136,17 +127,43 @@ connectionRouter.get("/feed", userAuthentication, async (req, res) => {
         { _id: { $ne: userId } },
       ],
     })
-      .select("firstName lastName skills about")
+      .select("firstName lastName skills about age photoURL")
       .limit(limit)
       .skip(skip);
     if (feedData.length === 0) {
       return res.status(200).json([]);
     }
-    console.log(feedData);
     res.status(200).json(Array.from(feedData));
   } catch (err) {
     res.status(400).send("Error fetching feed" + err.message);
   }
 });
+
+connectionRouter.delete(
+  "/disconnect/:connectionId",
+  userAuthentication,
+  async (req, res) => {
+    try {
+      const token = req.cookies.token;
+      const decoded = jwt.verify(token, "SAYAR@123");
+      const { userId } = decoded;
+      const connectionId = req.params.connectionId;
+
+      const connection = await Connection.findOne({
+        _id: connectionId,
+        $or: [{ fromUserId: userId }, { toUserId: userId }],
+      });
+
+      if (!connection) {
+        return res.status(404).send("Connection not found");
+      }
+
+      await Connection.deleteOne({ _id: connectionId });
+      res.status(200).send("Disconnected successfully");
+    } catch (err) {
+      res.status(400).send("Error disconnecting users" + err.message);
+    }
+  }
+);
 
 module.exports = connectionRouter;

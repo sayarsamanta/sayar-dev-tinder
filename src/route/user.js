@@ -1,15 +1,16 @@
 const express = require("express");
+const jwt = require("jsonwebtoken");
 const bcrypt = require("bcrypt");
 const { isStrongPassword } = require("validator");
 const userRouter = express.Router();
 const userAuthentication = require("../middleware/auth").userAuthentication;
 const User = require("../schemas/user");
+const Connection = require("../schemas/connectionSchema");
 
 //find all user
 userRouter.get("/user/all", userAuthentication, async (req, res) => {
   try {
     const users = await User.find({});
-    console.log(users);
     res.status(200).json(users);
   } catch (err) {
     res.status(500).send("Error fetching users");
@@ -17,13 +18,15 @@ userRouter.get("/user/all", userAuthentication, async (req, res) => {
 });
 
 //find specific user
-userRouter.get("/user/:id", userAuthentication, async (req, res) => {
+userRouter.get("/user", userAuthentication, async (req, res) => {
   try {
-    const userId = req.params.id;
-    const users = await User.findOne({ userId });
-    res.status(200).json(users);
+    const token = req.cookies.token;
+    const decoded = jwt.verify(token, "SAYAR@123");
+    const { userId } = decoded;
+    const users = await User.findById(userId);
+    res.status(200).json({ data: users });
   } catch (err) {
-    res.status(500).send("Error fetching user");
+    res.status(500).send("Error fetching user" + err.message);
   }
 });
 
@@ -33,7 +36,15 @@ userRouter.patch("/user/edit/:id", userAuthentication, async (req, res) => {
   const updateData = req.body;
 
   try {
-    const allowedField = ["firstName", "lastName", "skills", "about"];
+    const allowedField = [
+      "firstName",
+      "lastName",
+      "skills",
+      "about",
+      "age",
+      "photoURL",
+      "gender",
+    ];
     const isValidOperation = Object.keys(updateData).every((field) =>
       allowedField.includes(field)
     );
@@ -105,13 +116,57 @@ userRouter.patch(
 
       // 5️⃣ Save
       user.password = hashed;
+      const getJWTToken = user.getJWTToken(user._id);
+      res.cookie("token", getJWTToken, { httpOnly: true });
       await user.save();
 
-      res.json({ message: "Password updated successfully" });
+      res.json({ message: "Password updated successfully", data: user });
     } catch (err) {
       res.status(500).json({ message: err.message });
     }
   }
 );
+
+userRouter.get("/user/feed", userAuthentication, async (req, res) => {
+  try {
+    const token = req.cookies.token;
+    const decoded = jwt.verify(token, "SAYAR@123");
+    const { userId } = decoded;
+    const { search = "" } = req.query;
+
+    // Step 1: Find users already interacted with
+    const connections = await Connection.find({
+      $or: [{ fromUserId: userId }, { toUserId: userId }],
+    }).select("fromUserId toUserId");
+    const excludedIds = connections.map((c) =>
+      c.fromUserId.equals(userId) ? c.toUserId : c.fromUserId
+    );
+
+    excludedIds.push(userId);
+
+    // Step 2: Build search filter
+    const searchFilter =
+      search.trim() !== ""
+        ? {
+            $or: [
+              { firstName: { $regex: search, $options: "i" } },
+              { lastName: { $regex: search, $options: "i" } },
+              { skills: { $elemMatch: { $regex: search, $options: "i" } } },
+              { about: { $regex: search, $options: "i" } },
+            ],
+          }
+        : {};
+
+    // Step 3: Fetch users
+    const users = await User.find({
+      _id: { $nin: excludedIds },
+      ...searchFilter,
+    }).limit(20);
+
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "Error fetching feed" });
+  }
+});
 
 module.exports = userRouter;

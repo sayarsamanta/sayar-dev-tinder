@@ -14,14 +14,14 @@ authRouter.post("/login", async (req, res) => {
     }
     const match = await users.validatePassword(password);
     if (!match) {
-      return res.status(401).send("Invalid credentials");
+      return res.status(401).json({ message: "Invalid credentials" });
     } else {
       const getJWTToken = users.getJWTToken(users._id);
       res.cookie("token", getJWTToken, { httpOnly: true });
-      return res.status(200).send("Login successful");
+      return res.status(200).json({ data: users, message: "Login successful" });
     }
   } catch (err) {
-    res.status(400).send("Error logging in" + err.message);
+    res.status(400).json({ message: err.message });
   }
 });
 
@@ -40,9 +40,14 @@ authRouter.post("/signup", async (req, res) => {
       password: await bcrypt.hash(password, 10),
     };
     const user = new User(userObj);
-    await user.save().then(() => {
+    const userDetails = await user.save();
+    if (!userDetails) {
+      return res.status(400).send("Error creating user");
+    } else {
+      const getJWTToken = user.getJWTToken(user._id);
+      res.cookie("token", getJWTToken, { httpOnly: true });
       res.status(201).send("User created successfully");
-    });
+    }
   } catch (err) {
     res.status(400).send(err.message);
   }

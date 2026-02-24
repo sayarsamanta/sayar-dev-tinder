@@ -15,7 +15,7 @@ getRequestRouter.get(
       const connections = await Connection.find({
         toUserId: userId,
         status: "interested",
-      }).populate("fromUserId", "firstName lastName skills about");
+      }).populate("fromUserId", "firstName lastName skills about photoURL");
       if (connections.length === 0) {
         return res
           .status(200)
@@ -37,10 +37,13 @@ getRequestRouter.get(
       const decoded = jwt.verify(token, "SAYAR@123");
       const { userId } = decoded;
       const connections = await Connection.find({
-        $or: [{ fromUserId: userId }, { toUserId: userId }],
+        $or: [
+          { fromUserId: userId, status: "accepted" },
+          { toUserId: userId, status: "accepted" },
+        ],
       })
-        .populate("fromUserId", "firstName lastName skills about")
-        .populate("toUserId", "firstName lastName skills about");
+        .populate("fromUserId", "firstName lastName skills about photoURL")
+        .populate("toUserId", "firstName lastName skills about photoURL");
       if (connections.length === 0) {
         return res.status(200).json({ message: "No connections found" });
       }
