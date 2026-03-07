@@ -39,17 +39,6 @@ AWS EC2 (public IP hosting)
 Git & GitHub, Firebase, CI/CD, Agile, Scrum, Performance Optimization, Responsive Design  
 
 
-## 📸 Screenshots
-
-![Login Screen](./screenshots/login.png)  
-![Swipe Interface](./screenshots/register.png)  
-![Connections & Requests](./screenshots/connections.png)  
-![Profile & Edit](./screenshots/profile.png)  
-![Chat Feature](./screenshots/requests.png)  
-
-*(Add your actual screenshots in a `screenshots` folder)*
-
-
 ## 🚀 Getting Started
 
 ### Prerequisites
