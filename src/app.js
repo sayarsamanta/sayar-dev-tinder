@@ -8,7 +8,10 @@ app.use(express.json());
 app.use(cookieParser());
 // Adds headers: Access-Control-Allow-Origin: *
 
-const allowedOrigins = [process.env.CLIENT_URL];
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  "https://sayar-devtinder-web.vercel.app",
+];
 app.use(
   cors({
     origin: function (origin, callback) {
