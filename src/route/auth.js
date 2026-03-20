@@ -17,7 +17,11 @@ authRouter.post("/login", async (req, res) => {
       return res.status(401).json({ message: "Invalid credentials" });
     } else {
       const getJWTToken = users.getJWTToken(users._id);
-      res.cookie("token", getJWTToken, { httpOnly: true });
+      res.cookie("token", getJWTToken, {
+        httpOnly: true,
+        secure: true, // required for HTTPS
+        sameSite: "none",
+      }); // allows cross-origin cookies });
       return res.status(200).json({ data: users, message: "Login successful" });
     }
   } catch (err) {
