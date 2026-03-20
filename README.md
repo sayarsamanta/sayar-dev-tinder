@@ -17,7 +17,6 @@
   - Secure login with JWT authentication.  
   - Password update and profile editing functionality.  
   - Logout functionality for session security.
-- **Real-time Chat:** Chat instantly with matched developers.
 - **Search & Filters:** Filter developers by programming language, experience, or location.
 - **Responsive Design:** Optimized for desktop and mobile screens.
 - **State Management:** Built with Redux Toolkit for handling complex state efficiently.
